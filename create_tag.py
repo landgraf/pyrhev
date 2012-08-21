@@ -1,11 +1,8 @@
 #!/bin/env python
 
-
-import sys,os,httplib
+import sys
 from xml.dom.minidom import getDOMImplementation
-import base64
-import string
-import rhev_settings
+from rhev_connection import *
 
 def create_tag_xml(tagname):
     dom = getDOMImplementation()
@@ -18,27 +15,13 @@ def create_tag_xml(tagname):
     xmlString = document.toprettyxml(" " * 4)
     return  xmlString
 
-
 def get_cluster_uuid(cluster_name):
-    conn.request("GET","/api/clusters",None,headers)
-    r = conn.getresponse()
-    print  r.status, r.reason
+    clusters = rhev_get("/api/clusters")
 
-def rhev_post(xml):
-    conn.request("POST", "/", params, headers)
-    pass 
 
 if __name__ == '__main__':
     tagname = sys.argv[1]
-    ## TODO Move this staff to untracked file
-    userid = rhev_settings.USERNAME
-    passwd = rhev_settings.PASSWORD
-    rhev = rhev_settings.HOST_PORT
-    auth = base64.encodestring("%s:%s" % (userid, passwd))
-    conn = httplib.HTTPSConnection(rhev)
-    headers = {"Content-type": "application/xml",
-                     "Accept": "application/xml",
-                     "Authorization" : "Basic %s" % auth}
+    conn = rhev_connect()
     get_cluster_uuid("Projects")
     #print create_tag_xml(tagname)
 
