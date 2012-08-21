@@ -1,0 +1,11 @@
+sample scripts for using RHEV REST-API:
+all settings are in the file rhev_settings.py 
+HOST_PORT - host and port of RHEV instance format: host:port
+USERNAME  - username of api user
+PASSWORD  - no comments
+CLUSTER   - cluster for new network attaching ## TODO: list here?
+DC        - datacenter for new network attaching 
+TAG       - parent tag for new tags
+NIC       - NIC for non-rhevm networks 
+
+etc. 
