@@ -23,3 +23,11 @@ def rhev_get(url):
     r = conn.getresponse()
     return r.read()
 
+def rhev_post(url,data):
+    conn = rhev_connect()
+    print url
+    print data
+    conn.request('POST', url, data, get_headers())
+    r = conn.getresponse()
+    return r.read()
+    #return "Fuck"
