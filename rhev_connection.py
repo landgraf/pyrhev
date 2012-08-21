@@ -3,6 +3,7 @@
 import httplib,urllib
 import base64
 import string
+import libxml2
 import rhev_settings
 def get_headers():
     userid = rhev_settings.USERNAME
@@ -13,6 +14,42 @@ def get_headers():
                      "Accept-Charset": "utf-8",
                      "Authorization" : ("Basic %s" % auth)}
     return headers
+
+def get_tag_data(tagname,data):
+    tags = rhev_get("/api/tags")
+    doc = libxml2.parseDoc(tags)
+    ctxt = doc.xpathNewContext()
+    res = ctxt.xpathEval("/tags/tag[name[position()=1]= '" + tagname + "']")
+    for i in res:
+        return i.prop(data)
+
+def get_cluster_data(cluster_name,data):
+    clusters = rhev_get("/api/clusters")
+    doc = libxml2.parseDoc(clusters)
+    ctxt = doc.xpathNewContext()
+    res = ctxt.xpathEval("/clusters/cluster[name [position()=1]= '"+ cluster_name + "']")
+    for i in res:
+        return i.prop(data)
+
+def get_dc_data(dc_name,data):
+    clusters = rhev_get("/api/datacenters")
+    doc = libxml2.parseDoc(clusters)
+    ctxt = doc.xpathNewContext()
+    res = ctxt.xpathEval("/data_centers/data_center[name [position()=1]= '"+ dc_name + "']")
+    for i in res:
+        print i.prop(data)
+        return i.prop(data)
+
+def get_all_hosts(cluster):
+    hrefs = []
+    hosts = rhev_get("/api/hosts")
+    print "fuck"
+    doc = libxml2.parseDoc(hosts)
+    ctxt = doc.xpathNewContext()
+    res = ctxt.xpathEval("/hosts/host[cluster [@id]= '"+ get_cluster_data(rhev_settings.CLUSTER,id) + "']")
+    print len(res)
+    #for i in res:
+    #    print i.href("name")
 
 def rhev_connect():
     rhev = rhev_settings.HOST_PORT
