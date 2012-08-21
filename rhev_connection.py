@@ -41,15 +41,21 @@ def get_dc_data(dc_name,data):
         return i.prop(data)
 
 def get_all_hosts(cluster):
-    hrefs = []
+    nics = []
     hosts = rhev_get("/api/hosts")
-    print "fuck"
     doc = libxml2.parseDoc(hosts)
     ctxt = doc.xpathNewContext()
-    res = ctxt.xpathEval("/hosts/host[cluster [@id]= '"+ get_cluster_data(rhev_settings.CLUSTER,id) + "']")
-    print len(res)
-    #for i in res:
-    #    print i.href("name")
+    res = ctxt.xpathEval("/hosts/host[cluster[@id='" + get_cluster_data(cluster ,"id")  + "']]")
+    for i in res:
+        #hrefs.append(i.prop("href"))
+        nic = rhev_get(i.prop("href")+"/nics")
+        nicdoc = libxml2.parseDoc(nic)
+        ctxt = nicdoc.xpathNewContext()
+        res = ctxt.xpathEval("/host_nics/host_nic[name='eth1']")
+        for i in res:
+            print i.prop("href")
+            nics.append(i.prop("href"))
+    return nics
 
 def rhev_connect():
     rhev = rhev_settings.HOST_PORT
@@ -66,4 +72,6 @@ def rhev_post(url,data):
     conn = rhev_connect()
     conn.request("POST", url, body = data.encode('utf-8'), headers = get_headers())
     r = conn.getresponse()
+    ## DEBUG 
+    print r.status, r.reason
     return r.read()

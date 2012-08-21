@@ -33,13 +33,36 @@ def create_vlan_xml(name,description,vlan,stp="true"):
     print document.toxml()
     return document.toxml()
 
+def create_action_xml(network_id):
+    dom = getDOMImplementation()
+    document = dom.createDocument(None, "action", None)
+    topElement = document.documentElement
+    netElement = document.createElement("network")
+    netElement.setAttribute('id',network_id)
+    topElement.appendChild(netElement)
+    return document.toxml()
+
 def create_vlan(name, description,vlan):
+    print "Creating new logical network"
     networkxml = rhev_post("/api/networks", create_vlan_xml(name,description,vlan))
-    print rhev_post( get_cluster_data(rhev_settings.CLUSTER ,"href") + "/networks/" , networkxml)
+    print "Attaching new logical network to cluster " + rhev_settings.CLUSTER
+    return rhev_post( get_cluster_data(rhev_settings.CLUSTER ,"href") + "/networks/" , networkxml)
+
+def attach_to_all_hosts(networkid):
+    action_xml =  create_action_xml(networkid)
+    for host in get_all_hosts(rhev_settings.CLUSTER):
+        ## Attaching network to host
+        rhev_post(host + "/attach" ,action_xml)
+
+def get_network_id(networkxml):
+    doc = libxml2.parseDoc(networkxml)
+    ctxt = doc.xpathNewContext()
+    return ctxt.xpathEval("/network[@id]")[0].prop("id")
 
 if __name__ == '__main__':
     if len(sys.argv) != 4: sys.exit(1)
     vlanname = sys.argv[1]
     vlandescr = sys.argv[2]
     vlanid = sys.argv[3]
-    create_vlan(vlanname,vlandescr,vlanid)
+    networkxml = create_vlan(vlanname,vlandescr,vlanid)
+    attach_to_all_hosts(get_network_id(networkxml))
