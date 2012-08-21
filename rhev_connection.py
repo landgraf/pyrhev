@@ -8,7 +8,6 @@ def get_headers():
     userid = rhev_settings.USERNAME
     passwd = rhev_settings.PASSWORD
     auth = base64.encodestring("%s:%s" % (userid, passwd)).rstrip("\n")
-    #auth = base64.encodestring("%s:%s" % (userid, passwd))
     headers = {"Content-Type": "application/xml",
                      "Accept": "application/xml",
                      "Accept-Charset": "utf-8",
@@ -22,15 +21,12 @@ def rhev_connect():
 
 def rhev_get(url):
     conn = rhev_connect()
-    conn.set_debuglevel(1)
     conn.request("GET",url,None,get_headers())
     r = conn.getresponse()
     return r.read()
 
 def rhev_post(url,data):
     conn = rhev_connect()
-    conn.set_debuglevel(1)
     conn.request("POST", url, body = data.encode('utf-8'), headers = get_headers())
     r = conn.getresponse()
     return r.read()
-    #return "Fuck"
