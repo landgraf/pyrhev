@@ -40,8 +40,8 @@ def create_tag(tagname,parenttag):
     print rhev_post("/api/tags", create_tag_xml(tagname,parenttag))
 
 if __name__ == '__main__':
+    if len(sys.argv) != 2: sys.exit(1)
     tagname = sys.argv[1]
-    conn = rhev_connect()
     create_tag(tagname,get_tag_uuid("projects"))
 
 
