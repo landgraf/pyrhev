@@ -7,13 +7,13 @@ from xml.dom.minidom import getDOMImplementation
 from rhev_connection import *
 import libxml2
 
-def create_tag_xml(tagname):
+def create_tag_xml(tagname,parenttag):
     dom = getDOMImplementation()
     document = dom.createDocument(None, "tag", None)
     topElement = document.documentElement
     firstElement = document.createElement("name")
     parentElement = document.createElement("parent")
-    parentidElement = document.createElement('tag id="00000000-0000-0000-0000-000000000000"')
+    parentidElement = document.createElement('tag id="'+ parenttag + '"')
     parentElement.appendChild(parentidElement)
     topElement.appendChild(firstElement)
     topElement.appendChild(parentElement)
@@ -26,7 +26,7 @@ def get_tag_uuid(tagname):
     ctxt = doc.xpathNewContext()
     res = ctxt.xpathEval("/tags/tag[name[position()=1]= '" + tagname + "']")
     for i in res:
-        print i.prop("id")
+        return i.prop("id")
 
 def get_cluster_href(cluster_name):
     clusters = rhev_get("/api/clusters")
@@ -36,14 +36,12 @@ def get_cluster_href(cluster_name):
     for i in res:
         return i.prop('href')
 
-def create_tag(tagname):
-    print rhev_post("/api/tags", create_tag_xml(tagname))
+def create_tag(tagname,parenttag):
+    print rhev_post("/api/tags", create_tag_xml(tagname,parenttag))
 
 if __name__ == '__main__':
     tagname = sys.argv[1]
     conn = rhev_connect()
-    get_tag_uuid("projects")
-    create_tag(tagname)
-    #print create_tag_xml(tagname)
+    create_tag(tagname,get_tag_uuid("projects"))
 
 
