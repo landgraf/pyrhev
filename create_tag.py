@@ -26,7 +26,8 @@ def create_tag(tagname,parenttag):
     print rhev_post("/api/tags", create_tag_xml(tagname,parenttag))
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2: sys.exit(1)
+    if len(sys.argv) != 2: 
+        print "USAGE:\n./create_tag <tag_name>"
     tagname = sys.argv[1]
     create_tag(tagname,get_tag_data(rhev_settings.TAG,"id"))
 

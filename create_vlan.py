@@ -60,7 +60,9 @@ def get_network_id(networkxml):
     return ctxt.xpathEval("/network[@id]")[0].prop("id")
 
 if __name__ == '__main__':
-    if len(sys.argv) != 4: sys.exit(1)
+    if len(sys.argv) != 4:
+        print "USAGE:\n./create_vlans <VLAN name> <description> <VLAN ID>"
+        sys.exit(1)
     vlanname = sys.argv[1]
     vlandescr = sys.argv[2]
     vlanid = sys.argv[3]
