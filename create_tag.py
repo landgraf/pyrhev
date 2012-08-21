@@ -1,4 +1,5 @@
 #!/bin/env python
+# -*- coding: utf-8 -*-
 
 import sys
 import xml.dom.minidom
@@ -30,7 +31,6 @@ def get_cluster_href(cluster_name):
 
 def create_tag(tagname):
     print rhev_post("/api/tags", create_tag_xml(tagname))
-    #print rhev_post(get_cluster_href("Projects"),create_tag_xml(tagname))
 
 if __name__ == '__main__':
     tagname = sys.argv[1]

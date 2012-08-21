@@ -1,15 +1,18 @@
-
-import httplib
+#!/bin/env python
+# -*- coding: utf-8 -*-
+import httplib,urllib
 import base64
 import string
 import rhev_settings
 def get_headers():
     userid = rhev_settings.USERNAME
     passwd = rhev_settings.PASSWORD
-    auth = base64.encodestring("%s:%s" % (userid, passwd))
-    headers = {"Content-type": "application/xml",
+    auth = base64.encodestring("%s:%s" % (userid, passwd)).rstrip("\n")
+    #auth = base64.encodestring("%s:%s" % (userid, passwd))
+    headers = {"Content-Type": "application/xml",
                      "Accept": "application/xml",
-                     "Authorization" : "Basic %s" % auth}
+                     "Accept-Charset": "utf-8",
+                     "Authorization" : ("Basic %s" % auth)}
     return headers
 
 def rhev_connect():
@@ -19,15 +22,15 @@ def rhev_connect():
 
 def rhev_get(url):
     conn = rhev_connect()
+    conn.set_debuglevel(1)
     conn.request("GET",url,None,get_headers())
     r = conn.getresponse()
     return r.read()
 
 def rhev_post(url,data):
     conn = rhev_connect()
-    print url
-    print data
-    conn.request('POST', url, data, get_headers())
+    conn.set_debuglevel(1)
+    conn.request("POST", url, body = data.encode('utf-8'), headers = get_headers())
     r = conn.getresponse()
     return r.read()
     #return "Fuck"
