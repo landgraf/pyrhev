@@ -6,8 +6,11 @@ import string
 import libxml2
 import rhev_settings
 def get_headers():
+    """ get headers for HTTPS connection
+    """
     userid = rhev_settings.USERNAME
     passwd = rhev_settings.PASSWORD
+    # base64.encodestring adds trailing \n. 
     auth = base64.encodestring("%s:%s" % (userid, passwd)).rstrip("\n")
     headers = {"Content-Type": "application/xml",
                      "Accept": "application/xml",
@@ -16,6 +19,9 @@ def get_headers():
     return headers
 
 def get_tag_data(tagname,data):
+    """ Get properties of tag
+        return property for parent tag
+    """
     tags = rhev_get("/api/tags")
     doc = libxml2.parseDoc(tags)
     ctxt = doc.xpathNewContext()
@@ -24,6 +30,8 @@ def get_tag_data(tagname,data):
         return i.prop(data)
 
 def get_cluster_data(cluster_name,data):
+    """ Get properties of cluster
+    """
     clusters = rhev_get("/api/clusters")
     doc = libxml2.parseDoc(clusters)
     ctxt = doc.xpathNewContext()
@@ -32,6 +40,8 @@ def get_cluster_data(cluster_name,data):
         return i.prop(data)
 
 def get_dc_data(dc_name,data):
+    """ Get properties of data_center
+    """
     clusters = rhev_get("/api/datacenters")
     doc = libxml2.parseDoc(clusters)
     ctxt = doc.xpathNewContext()
@@ -41,6 +51,8 @@ def get_dc_data(dc_name,data):
         return i.prop(data)
 
 def get_all_hosts(cluster):
+    """ get "rhev_settings.NIC"  hrefs for attaching project networks
+    """
     nics = []
     hosts = rhev_get("/api/hosts")
     doc = libxml2.parseDoc(hosts)
@@ -58,17 +70,24 @@ def get_all_hosts(cluster):
     return nics
 
 def rhev_connect():
+    """ Just connect to RHEVM using HTTPS
+        HTTP not supported yet
+    """
     rhev = rhev_settings.HOST_PORT
     conn = httplib.HTTPSConnection(rhev)
     return conn
 
 def rhev_get(url):
+    """ Make GET request
+    """
     conn = rhev_connect()
     conn.request("GET",url,None,get_headers())
     r = conn.getresponse()
     return r.read()
 
 def rhev_post(url,data):
+    """ Make POST request, send data
+    """
     conn = rhev_connect()
     conn.request("POST", url, body = data.encode('utf-8'), headers = get_headers())
     r = conn.getresponse()

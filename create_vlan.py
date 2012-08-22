@@ -8,6 +8,9 @@ import libxml2
 
 
 def create_vlan_xml(name,description,vlan,stp="true"):
+    """ create network XML
+    """
+    int(vlan)
     dom = getDOMImplementation()
     document = dom.createDocument(None, "network", None)
     topElement = document.documentElement
@@ -34,6 +37,9 @@ def create_vlan_xml(name,description,vlan,stp="true"):
     return document.toxml()
 
 def create_action_xml(network_id):
+    """ create XML for attach network
+        @return xml
+    """
     dom = getDOMImplementation()
     document = dom.createDocument(None, "action", None)
     topElement = document.documentElement
@@ -43,18 +49,24 @@ def create_action_xml(network_id):
     return document.toxml()
 
 def create_vlan(name, description,vlan):
+    """ create new VLAN and attach it to cluster
+    """
     print "Creating new logical network"
     networkxml = rhev_post("/api/networks", create_vlan_xml(name,description,vlan))
     print "Attaching new logical network to cluster " + rhev_settings.CLUSTER
     return rhev_post( get_cluster_data(rhev_settings.CLUSTER ,"href") + "/networks/" , networkxml)
 
 def attach_to_all_hosts(networkid):
+    """ Attach vlan to all hosts in cluster rhev_settings.CLUSTER
+    """
     action_xml =  create_action_xml(networkid)
     for host in get_all_hosts(rhev_settings.CLUSTER):
         ## Attaching network to host
         rhev_post(host + "/attach" ,action_xml)
 
 def get_network_id(networkxml):
+    """ extract id from XML
+    """
     doc = libxml2.parseDoc(networkxml)
     ctxt = doc.xpathNewContext()
     return ctxt.xpathEval("/network[@id]")[0].prop("id")
