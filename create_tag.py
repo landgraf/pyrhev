@@ -7,7 +7,7 @@ from xml.dom.minidom import getDOMImplementation
 from rhev_connection import *
 import rhev_settings
 
-def create_tag_xml(tagname,parenttag):
+def createTagXml(tagname,parenttag):
     dom = getDOMImplementation()
     document = dom.createDocument(None, "tag", None)
     topElement = document.documentElement
@@ -22,13 +22,13 @@ def create_tag_xml(tagname,parenttag):
     return document.toxml()
 
 
-def create_tag(tagname,parenttag):
-    print rhev_post("/api/tags", create_tag_xml(tagname,parenttag))
+def createTag(tagname,parenttag):
+    print rhevPost("/api/tags", createTagXml(tagname,parenttag))
 
 if __name__ == '__main__':
     if len(sys.argv) != 2: 
-        print "USAGE:\n./create_tag <tag_name>"
+        print "USAGE:\n./createTag <tagName>"
     tagname = sys.argv[1]
-    create_tag(tagname,get_tag_data(rhev_settings.TAG,"id"))
+    createTag(tagname,getTagData(rhev_settings.TAG,"id"))
 
 

@@ -5,7 +5,7 @@ import base64
 import string
 import libxml2
 import rhev_settings
-def get_headers():
+def getHeaders():
     """ get headers for HTTPS connection
     """
     userid = rhev_settings.USERNAME
@@ -18,58 +18,58 @@ def get_headers():
                      "Authorization" : ("Basic %s" % auth)}
     return headers
 
-def get_tag_data(tagname,data):
+def getTagData(tagname,data):
     """ Get properties of tag
         return property for parent tag
     """
-    tags = rhev_get("/api/tags")
+    tags = rhevGet("/api/tags")
     doc = libxml2.parseDoc(tags)
     ctxt = doc.xpathNewContext()
     res = ctxt.xpathEval("/tags/tag[name[position()=1]= '" + tagname + "']")
     for i in res:
         return i.prop(data)
 
-def get_cluster_data(cluster_name,data):
+def getClusterData(clusterName,data):
     """ Get properties of cluster
     """
-    clusters = rhev_get("/api/clusters")
+    clusters = rhevGet("/api/clusters")
     doc = libxml2.parseDoc(clusters)
     ctxt = doc.xpathNewContext()
-    res = ctxt.xpathEval("/clusters/cluster[name [position()=1]= '"+ cluster_name + "']")
+    res = ctxt.xpathEval("/clusters/cluster[name [position()=1]= '"+ clusterName + "']")
     for i in res:
         return i.prop(data)
 
-def get_dc_data(dc_name,data):
-    """ Get properties of data_center
+def getDcData(dcName,data):
+    """ Get properties of dataCenter
     """
-    clusters = rhev_get("/api/datacenters")
+    clusters = rhevGet("/api/datacenters")
     doc = libxml2.parseDoc(clusters)
     ctxt = doc.xpathNewContext()
-    res = ctxt.xpathEval("/data_centers/data_center[name [position()=1]= '"+ dc_name + "']")
+    res = ctxt.xpathEval("/dataCenters/dataCenter[name [position()=1]= '"+ dcName + "']")
     for i in res:
         print i.prop(data)
         return i.prop(data)
 
-def get_all_hosts(cluster):
+def getAllHosts(cluster):
     """ get "rhev_settings.NIC"  hrefs for attaching project networks
     """
     nics = []
-    hosts = rhev_get("/api/hosts")
+    hosts = rhevGet("/api/hosts")
     doc = libxml2.parseDoc(hosts)
     ctxt = doc.xpathNewContext()
-    res = ctxt.xpathEval("/hosts/host[cluster[@id='" + get_cluster_data(cluster ,"id")  + "']]")
+    res = ctxt.xpathEval("/hosts/host[cluster[@id='" + getClusterData(cluster ,"id")  + "']]")
     for i in res:
         #hrefs.append(i.prop("href"))
-        nic = rhev_get(i.prop("href")+"/nics")
+        nic = rhevGet(i.prop("href")+"/nics")
         nicdoc = libxml2.parseDoc(nic)
         ctxt = nicdoc.xpathNewContext()
-        res = ctxt.xpathEval("/host_nics/host_nic[name='eth1']")
+        res = ctxt.xpathEval("/hostNics/hostNic[name='eth1']")
         for i in res:
             print i.prop("href")
             nics.append(i.prop("href"))
     return nics
 
-def rhev_connect():
+def rhevConnect():
     """ Just connect to RHEVM using HTTPS
         HTTP not supported yet
     """
@@ -77,19 +77,19 @@ def rhev_connect():
     conn = httplib.HTTPSConnection(rhev)
     return conn
 
-def rhev_get(url):
+def rhevGet(url):
     """ Make GET request
     """
-    conn = rhev_connect()
-    conn.request("GET",url,None,get_headers())
+    conn = rhevConnect()
+    conn.request("GET",url,None,getHeaders())
     r = conn.getresponse()
     return r.read()
 
-def rhev_post(url,data):
+def rhevPost(url,data):
     """ Make POST request, send data
     """
-    conn = rhev_connect()
-    conn.request("POST", url, body = data.encode('utf-8'), headers = get_headers())
+    conn = rhevConnect()
+    conn.request("POST", url, body = data.encode('utf-8'), headers = getHeaders())
     r = conn.getresponse()
     ## DEBUG 
     print r.status, r.reason

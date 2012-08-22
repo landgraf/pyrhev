@@ -7,7 +7,7 @@ from rhev_connection import *
 import libxml2
 
 
-def create_vlan_xml(name,description,vlan,stp="true"):
+def createVlanXml(name,description,vlan,stp="true"):
     """ create network XML
     """
     int(vlan)
@@ -18,9 +18,9 @@ def create_vlan_xml(name,description,vlan,stp="true"):
     vlanElement = document.createElement("vlan")
     vlanElement.setAttribute("id",vlan)
     stpElement = document.createElement("stp")
-    dcElement = document.createElement("data_center")
-    dcElement.setAttribute('id',get_dc_data(rhev_settings.DC,"id"))
-    dcElement.setAttribute('href',get_dc_data(rhev_settings.DC,"href"))
+    dcElement = document.createElement("dataCenter")
+    dcElement.setAttribute('id',getDcData(rhev_settings.DC,"id"))
+    dcElement.setAttribute('href',getDcData(rhev_settings.DC,"href"))
     descriptionElement = document.createElement("description")
     topElement.appendChild(nameElement)
     topElement.appendChild(descriptionElement)
@@ -36,7 +36,7 @@ def create_vlan_xml(name,description,vlan,stp="true"):
     print document.toxml()
     return document.toxml()
 
-def create_action_xml(network_id):
+def createActionXml(networkId):
     """ create XML for attach network
         @return xml
     """
@@ -44,27 +44,27 @@ def create_action_xml(network_id):
     document = dom.createDocument(None, "action", None)
     topElement = document.documentElement
     netElement = document.createElement("network")
-    netElement.setAttribute('id',network_id)
+    netElement.setAttribute('id',networkId)
     topElement.appendChild(netElement)
     return document.toxml()
 
-def create_vlan(name, description,vlan):
+def createVlan(name, description,vlan):
     """ create new VLAN and attach it to cluster
     """
     print "Creating new logical network"
-    networkxml = rhev_post("/api/networks", create_vlan_xml(name,description,vlan))
+    networkxml = rhevPost("/api/networks", createVlanXml(name,description,vlan))
     print "Attaching new logical network to cluster " + rhev_settings.CLUSTER
-    return rhev_post( get_cluster_data(rhev_settings.CLUSTER ,"href") + "/networks/" , networkxml)
+    return rhevPost( getClusterData(rhev_settings.CLUSTER ,"href") + "/networks/" , networkxml)
 
-def attach_to_all_hosts(networkid):
+def attachToAllHosts(networkid):
     """ Attach vlan to all hosts in cluster rhev_settings.CLUSTER
     """
-    action_xml =  create_action_xml(networkid)
-    for host in get_all_hosts(rhev_settings.CLUSTER):
+    actionXml =  createActionXml(networkid)
+    for host in getAllHosts(rhev_settings.CLUSTER):
         ## Attaching network to host
-        rhev_post(host + "/attach" ,action_xml)
+        rhevPost(host + "/attach" ,actionXml)
 
-def get_network_id(networkxml):
+def getNetworkId(networkxml):
     """ extract id from XML
     """
     doc = libxml2.parseDoc(networkxml)
@@ -73,10 +73,10 @@ def get_network_id(networkxml):
 
 if __name__ == '__main__':
     if len(sys.argv) != 4:
-        print "USAGE:\n./create_vlans <VLAN name> <description> <VLAN ID>"
+        print "USAGE:\n./createVlans <VLAN name> <description> <VLAN ID>"
         sys.exit(1)
     vlanname = sys.argv[1]
     vlandescr = sys.argv[2]
     vlanid = sys.argv[3]
-    networkxml = create_vlan(vlanname,vlandescr,vlanid)
-    attach_to_all_hosts(get_network_id(networkxml))
+    networkxml = createVlan(vlanname,vlandescr,vlanid)
+    attachToAllHosts(getNetworkId(networkxml))
