@@ -1,7 +1,7 @@
 #!/bin/env python
 # -*- coding: utf-8 -*-
 import httplib,urllib
-import base64
+import base64,sys
 import string
 import libxml2
 import rhev_settings
@@ -39,15 +39,36 @@ def getClusterData(clusterName,data):
     for i in res:
         return i.prop(data)
 
+def getListOfVlans():
+    """ get list of dictionaries of networks """
+    networksxml = rhevGet("/api/networks")
+    doc = libxml2.parseDoc(networksxml)
+    ctxt = doc.xpathNewContext()
+    ## res =  ctxt.xpathEval("/networks/network[data_center[@id='%s']/vlan/@id]"%getDcData(rhev_settings.DC ,"id"))
+    res = ctxt.xpathEval("/networks/network/data_center[@id='"  + getDcData(rhev_settings.DC ,"id") + "']/../*[self::name or self::vlan/@id]")
+    vlans = []
+    for i in res:
+        if i.get_name() == "name":
+            vlan = {}
+            vlan["name"] = i.get_content()
+        if i.get_name() == "vlan":
+            vlan["vlanid"] = i.prop("id")
+            vlans.append(vlan)
+            vlan = None
+    print vlans
+    for vlan in vlans: 
+        print "Name: %s\t\t\t\tVLAN ID: %s" %(vlan["name"],vlan["vlanid"])
+    return vlans
+
+
 def getDcData(dcName,data):
     """ Get properties of dataCenter
     """
     clusters = rhevGet("/api/datacenters")
     doc = libxml2.parseDoc(clusters)
     ctxt = doc.xpathNewContext()
-    res = ctxt.xpathEval("/dataCenters/dataCenter[name [position()=1]= '"+ dcName + "']")
+    res = ctxt.xpathEval("/data_centers/data_center[name [position()=1]= '"+ dcName + "']")
     for i in res:
-        print i.prop(data)
         return i.prop(data)
 
 def getAllHosts(cluster):
@@ -63,7 +84,7 @@ def getAllHosts(cluster):
         nic = rhevGet(i.prop("href")+"/nics")
         nicdoc = libxml2.parseDoc(nic)
         ctxt = nicdoc.xpathNewContext()
-        res = ctxt.xpathEval("/hostNics/hostNic[name='eth1']")
+        res = ctxt.xpathEval("/host_nics/host_nic[name='eth1']")
         for i in res:
             print i.prop("href")
             nics.append(i.prop("href"))
@@ -89,6 +110,8 @@ def rhevPost(url,data):
     """ Make POST request, send data
     """
     conn = rhevConnect()
+    print url
+    print data
     conn.request("POST", url, body = data.encode('utf-8'), headers = getHeaders())
     r = conn.getresponse()
     ## DEBUG 

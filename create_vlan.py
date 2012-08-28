@@ -5,6 +5,7 @@ import xml.dom.minidom
 from xml.dom.minidom import getDOMImplementation
 from rhev_connection import *
 import libxml2
+from optparse import OptionParser
 
 
 def createVlanXml(name,description,vlan,stp="true"):
@@ -18,7 +19,7 @@ def createVlanXml(name,description,vlan,stp="true"):
     vlanElement = document.createElement("vlan")
     vlanElement.setAttribute("id",vlan)
     stpElement = document.createElement("stp")
-    dcElement = document.createElement("dataCenter")
+    dcElement = document.createElement("data_center")
     dcElement.setAttribute('id',getDcData(rhev_settings.DC,"id"))
     dcElement.setAttribute('href',getDcData(rhev_settings.DC,"href"))
     descriptionElement = document.createElement("description")
@@ -33,7 +34,6 @@ def createVlanXml(name,description,vlan,stp="true"):
     nameElement.appendChild(nameNode)
     stpElement.appendChild(stpNode)
     descriptionElement.appendChild(descriptionNode)
-    print document.toxml()
     return document.toxml()
 
 def createActionXml(networkId):
@@ -47,6 +47,7 @@ def createActionXml(networkId):
     netElement.setAttribute('id',networkId)
     topElement.appendChild(netElement)
     return document.toxml()
+
 
 def createVlan(name, description,vlan):
     """ create new VLAN and attach it to cluster
@@ -72,11 +73,39 @@ def getNetworkId(networkxml):
     return ctxt.xpathEval("/network[@id]")[0].prop("id")
 
 if __name__ == '__main__':
-    if len(sys.argv) != 4:
-        print "USAGE:\n./createVlans <VLAN name> <description> <VLAN ID>"
+    parser = OptionParser()
+    parser.add_option("--action","-a",dest="action",help="Action to do",)
+    parser.add_option("--projectname","-p", dest="project", help="Coded name of project")
+    parser.add_option("--vlanid",dest="vlanid",help = "VLAN ID")
+    (options, args) = parser.parse_args()
+    if not options.action:
+        print "You MUST specify action"
         sys.exit(1)
-    vlanname = sys.argv[1]
-    vlandescr = sys.argv[2]
-    vlanid = sys.argv[3]
-    networkxml = createVlan(vlanname,vlandescr,vlanid)
-    attachToAllHosts(getNetworkId(networkxml))
+    if options.action == "list":
+        if not options.vlanid and not options.project: 
+            getListOfVlans()
+            sys.exit(0)
+        if options.vlanid:
+            print "Searching by VLANID"
+        if options.project:
+            print "Searching by network name"
+        sys,exit(0)
+    if options.action == "create":
+        print "Create"
+        if not options.project or not options.vlanid:
+            print "You MUST specify both project and vlanid options"
+            sys.exit(1)
+        try :
+            int(options.vlanid)
+        except :
+            print "VLANID MUST be a number"
+            sys,exit(1)
+        networkxml = createVlan(options.project,"VLAN" + options.vlanid.strip(), options.vlanid)
+        attachToAllHosts(getNetworkId(networkxml))
+        sys,exit(0)
+    print "No such action %s, please read help and try again" %options.action
+    sys.exit(1)
+
+
+    #networkxml = createVlan(vlanname,vlandescr,vlanid)
+    #attachToAllHosts(getNetworkId(networkxml))
