@@ -39,7 +39,21 @@ def getClusterData(clusterName,data):
     for i in res:
         return i.prop(data)
 
-def getListOfVlans():
+def getListOfVMs(name = None):
+    """ get getListOfVMs 
+    if name is specified search by name
+    """
+    if name:
+        vms = rhevGet("/api/vms?search=name%3D*" + name + "*")
+    else:
+        vms = rhevGet("/api/vms")
+    doc = libxml2.parseDoc(vms)
+    ctxt = doc.xpathNewContext()
+    res = ctxt.xpathEval("/vms/vm[cluster/@id='"+ getClusterData(rhev_settings.CLUSTER ,"id") + "']")
+    for vm in res:
+        print "Name %s\t\t\t\t\tID: %s"%(vm.firstElementChild().get_content(),vm.prop("id"))
+
+def getListOfVlans(search=None):
     """ get list of dictionaries of networks """
     networksxml = rhevGet("/api/networks")
     doc = libxml2.parseDoc(networksxml)
@@ -55,9 +69,16 @@ def getListOfVlans():
             vlan["vlanid"] = i.prop("id")
             vlans.append(vlan)
             vlan = None
-    print vlans
     for vlan in vlans: 
-        print "Name: %s\t\t\t\tVLAN ID: %s" %(vlan["name"],vlan["vlanid"])
+        if not search:
+            print "Name: %s\t\t\t\tVLAN ID: %s" %(vlan["name"],vlan["vlanid"])
+        else:
+            try:
+                if int(vlan["vlanid"]) == int(search):
+                    print "Name: %s\t\t\t\tVLAN ID: %s" %(vlan["name"],vlan["vlanid"])
+            except:
+                if vlan["name"].find(search) != -1 :
+                    print "Name: %s\t\t\t\tVLAN ID: %s" %(vlan["name"],vlan["vlanid"])
     return vlans
 
 
@@ -86,7 +107,6 @@ def getAllHosts(cluster):
         ctxt = nicdoc.xpathNewContext()
         res = ctxt.xpathEval("/host_nics/host_nic[name='eth1']")
         for i in res:
-            print i.prop("href")
             nics.append(i.prop("href"))
     return nics
 
@@ -110,8 +130,6 @@ def rhevPost(url,data):
     """ Make POST request, send data
     """
     conn = rhevConnect()
-    print url
-    print data
     conn.request("POST", url, body = data.encode('utf-8'), headers = getHeaders())
     r = conn.getresponse()
     ## DEBUG 
