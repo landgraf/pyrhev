@@ -5,6 +5,15 @@ import base64,sys
 import string
 import libxml2
 import rhev_settings
+
+def numberOfDisks(vmid):
+    disks = rhevGet("/api/vms/" + vmid + "/disks")
+    doc = libxml2.parseDoc(disks)
+    ctxt = doc.xpathNewContext()
+    res = ctxt.xpathEval("/disks/disk")
+    return len(res)
+
+
 def getHeaders():
     """ get headers for HTTPS connection
     """
@@ -39,7 +48,7 @@ def getClusterData(clusterName,data):
     for i in res:
         return i.prop(data)
 
-def getListOfVMs(name = None):
+def getListOfVMs(name = None,selector = None):
     """ get getListOfVMs 
     if name is specified search by name
     """
@@ -50,8 +59,31 @@ def getListOfVMs(name = None):
     doc = libxml2.parseDoc(vms)
     ctxt = doc.xpathNewContext()
     res = ctxt.xpathEval("/vms/vm[cluster/@id='"+ getClusterData(rhev_settings.CLUSTER ,"id") + "']")
-    for vm in res:
-        print "Name %s\t\t\t\t\tID: %s"%(vm.firstElementChild().get_content(),vm.prop("id"))
+    if not selector:
+        for vm in res:
+            print "Name %s\t\t\t\t\tID: %s"%(vm.firstElementChild().get_content(),vm.prop("id"))
+        return None
+    vms = []
+    for v in res:
+        vm = {}
+        vm["name"] = v.firstElementChild().get_content()
+        vm["id"] = v.prop("id")
+        vms.append(vm)
+    return vms
+
+def getListOfSDs(name = None,selector = None):
+    """ Get list of storage domains for DC specified in rhev_settings """
+    sds = rhevGet("/api/datacenters/%s/storagedomains"%getDcData(rhev_settings.DC,"id"))
+    doc = libxml2.parseDoc(sds)
+    ctxt = doc.xpathNewContext()
+    res = ctxt.xpathEval("/storage_domains/storage_domain")
+    sdlist = []
+    for sd in res:
+        sdin = {}
+        sdin["name"] = sd.firstElementChild().get_content()
+        sdin["id"] = sd.prop("id")
+        sdlist.append(sdin)
+    return sdlist
 
 def getListOfVlans(search=None):
     """ get list of dictionaries of networks """
@@ -132,6 +164,8 @@ def rhevPost(url,data):
     conn = rhevConnect()
     conn.request("POST", url, body = data.encode('utf-8'), headers = getHeaders())
     r = conn.getresponse()
+    print url
     ## DEBUG 
+    ## TODO: check status 
     print r.status, r.reason
     return r.read()

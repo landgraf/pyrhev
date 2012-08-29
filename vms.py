@@ -128,38 +128,11 @@ def createVmXml(vmname,vmdescription,clustername,memory,osparam = None):
 ######################################################
 ################# DISK XML ###########################
 ######################################################
-def createDiskXML(amount,disktype):
+def createDiskXML(vmid, sd, amount,disktype):
     """ create XML for attaching disk
     """
-    dom = getDOMImplementation()
-    document = dom.createDocument(None, "disk", None)
-    topElement = document.documentElement
-    sdElement = document.createElement("storage_domains")
-    sdIdElement = document.createElement("storage_domain")
-    sdIdElement.setAttribute("id","FUCK")
-    sdElement.appendChild(sdIdElement)
-    topElement.appendChild(sdElement)
-    sizeElement = document.createElement("size")
-    sizeNode = document.createTextNode(str(int(amount)*(1024**3)))
-    sizeElement.appendChild(sizeNode)
-    topElement.appendChild(sizeElement)
-    typeElement = document.createElement("type")
-    typeNode = document.createTextNode(disktype)
-    typeElement.appendChild(typeNode)
-    topElement.appendChild(typeElement)
-    formatElement = document.createElement("format")
-    formatElement.appendChild(document.createTextNode("cow"))
-    topElement.appendChild(formatElement)
-    bootableElement = document.createElement("bootable")
-    bootableNode = document.createTextNode("true")
-    bootableElement.appendChild(bootableNode)
-    topElement.appendChild(bootableElement)
-    print document.toprettyxml()
-
-
-    
-
     """
+    EXAMPLE:
     <disk>
         <storage_domains>
             <storage_domain id="fabe0451-701f-4235-8f7e-e20e458819ed"/>
@@ -171,14 +144,58 @@ def createDiskXML(amount,disktype):
         <bootable>true</bootable>
     </disk>
     """
+    dom = getDOMImplementation()
+    document = dom.createDocument(None, "disk", None)
+    topElement = document.documentElement
+
+
+    sdElement = document.createElement("storage_domains")
+    sdIdElement = document.createElement("storage_domain")
+    sdIdElement.setAttribute("id",sd)
+    sdElement.appendChild(sdIdElement)
+    topElement.appendChild(sdElement)
+
+
+    sizeElement = document.createElement("size")
+    sizeNode = document.createTextNode(str(int(amount)*(1024**3)))
+    sizeElement.appendChild(sizeNode)
+    topElement.appendChild(sizeElement)
+
+
+    typeElement = document.createElement("type")
+    typeNode = document.createTextNode(disktype)
+    typeElement.appendChild(typeNode)
+    topElement.appendChild(typeElement)
+
+
+    interfaceElement = document.createElement("interface")
+    interfaceNode = document.createTextNode("virtio")
+    interfaceElement.appendChild(interfaceNode)
+    topElement.appendChild(interfaceElement)
+
+
+    formatElement = document.createElement("format")
+    formatElement.appendChild(document.createTextNode("cow"))
+    topElement.appendChild(formatElement)
+
+
+    bootableElement = document.createElement("bootable")
+    bootableNode = document.createTextNode("false")
+    ## Check if first disk
+    if numberOfDisks(vmid) == 0: bootableNode = document.createTextNode("true")
+    bootableElement.appendChild(bootableNode)
+    topElement.appendChild(bootableElement)
+
+
+    return document.toxml()
+
 def createVm(vmname,clustername,memory,vmdescription,osparam):
     vmXML = createVmXml(vmname = vmname,
             clustername = clustername,
             memory = memory,
             vmdescription = vmdescription,
             osparam = osparam)
-    print vmXML
-    #print rhevPost("/api/vms",vmXML)
+    print rhevPost("/api/vms",vmXML)
 
 def testAction():
     osparam = {}
@@ -189,9 +206,45 @@ def testAction():
     createVm(vmname = "vmname" ,
             clustername = rhev_settings.CLUSTER,
             #memory = str(536870912),
-            memory = str(1024*(1024**2)),
+            memory = 1024,
             vmdescription = "vmDescription",
             osparam = osparam)
+
+def vmSelect(name):
+    selector = getListOfVMs(name,True)
+    number = len(selector)
+    if number == 0 :
+        print "VM not found exiting"
+        sys.exit(1)
+    if number == 1:
+        print "Founded 1 VM %s, using it"%selector[0]["name"]
+        return selector[0]["id"]
+    print "%d VM is (are) founded please select"%int(number)
+    for i in selector:
+        print "%d) %s "%(selector.index(i),i["name"])
+    a = input("Please specify:")
+    print "VM %s selected"%selector[a]["name"]
+    return selector[a]["id"]
+
+def sdSelect(name):
+    selector = getListOfSDs(name,True)
+    number = len(selector)
+    if number == 0 : 
+        print "SD not found exiting"
+        sys.exit(1)
+    print "%d SD is (are) founded please select"%int(number)
+    for i in selector:
+        print "%d) %s "%(selector.index(i),i["name"])
+    a = input("Please specify:")
+    print "SD %s selected"%selector[a]["name"]
+    return selector[a]["id"]
+
+def attachDisk(vmid,diskXML):
+    if not vmid:
+        print "VM not specified exiting..."
+        sys.exit(1)
+    print rhevPost("/api/vms/"+ vmid + "/disks" ,diskXML)
+
 
 if __name__=="__main__":
     parser = OptionParser()
@@ -242,9 +295,9 @@ if __name__=="__main__":
         disktype = "data"
         if options.disktype == "system":
             disktype = "system"
-        createDiskXML(options.hd,disktype)
-        ## attachDisk(createDiskXML(ammount))
-        sys.exit(0)
+        vmid = vmSelect(options.vmname or "")
+        sd = sdSelect(None)
+        attachDisk(vmid,createDiskXML(vmid,sd,options.hd,disktype))
     if options.action == "test":
         testAction()
 
