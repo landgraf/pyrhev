@@ -134,51 +134,51 @@ def createDiskXML(vmid, sd, amount,disktype):
     """
     EXAMPLE:
     <disk>
-        <storage_domains>
-            <storage_domain id="fabe0451-701f-4235-8f7e-e20e458819ed"/>
-        </storage_domains>        
-        <size>8589934592</size>
-        <type>system</type>
-        <interface>virtio</interface>
-        <format>cow</format>
-        <bootable>true</bootable>
     </disk>
     """
     dom = getDOMImplementation()
     document = dom.createDocument(None, "disk", None)
     topElement = document.documentElement
-
-
+    """
+        <storage_domains>
+            <storage_domain id="fabe0451-701f-4235-8f7e-e20e458819ed"/>
+        </storage_domains>        
+    """
     sdElement = document.createElement("storage_domains")
     sdIdElement = document.createElement("storage_domain")
     sdIdElement.setAttribute("id",sd)
     sdElement.appendChild(sdIdElement)
     topElement.appendChild(sdElement)
-
-
+    """
+        <size>8589934592</size>
+    """
     sizeElement = document.createElement("size")
     sizeNode = document.createTextNode(str(int(amount)*(1024**3)))
     sizeElement.appendChild(sizeNode)
     topElement.appendChild(sizeElement)
-
-
+    """
+        <type>system</type>
+    """
     typeElement = document.createElement("type")
     typeNode = document.createTextNode(disktype)
     typeElement.appendChild(typeNode)
     topElement.appendChild(typeElement)
-
-
+    """
+        <interface>virtio</interface>
+    """
     interfaceElement = document.createElement("interface")
     interfaceNode = document.createTextNode("virtio")
     interfaceElement.appendChild(interfaceNode)
     topElement.appendChild(interfaceElement)
-
-
+    """
+        <format>cow</format>
+    """
     formatElement = document.createElement("format")
     formatElement.appendChild(document.createTextNode("cow"))
     topElement.appendChild(formatElement)
-
-
+    """
+        <bootable>true</bootable>
+    """
     bootableElement = document.createElement("bootable")
     bootableNode = document.createTextNode("false")
     ## Check if first disk
