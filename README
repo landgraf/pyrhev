@@ -7,5 +7,8 @@ CLUSTER   - cluster for new network attaching ## TODO: list here?
 DC        - datacenter for new network attaching 
 TAG       - parent tag for new tags
 NIC       - NIC for non-rhevm networks 
+OSTYPES    - dict of ostypes and pathes of image location (cdrom location), pathes MUST be valid on hosts (or use <placement_policy> for vm xml
+##OSTYPES = {"other_linux": None,"windows_xp": None,"windows_7" : None,"rhel_5x64": "/mnt/share/images/RHEL/5/6/x86_64/","rhel_6x64" : None}
+
 
 etc. 
