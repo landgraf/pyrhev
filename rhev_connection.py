@@ -48,6 +48,14 @@ def getClusterData(clusterName,data):
     for i in res:
         return i.prop(data)
 
+def getNetworkData(name,data):
+    networks = rhevGet("/api/networks")
+    doc = libxml2.parseDoc(networks)
+    ctxt = doc.xpathNewContext()
+    res = ctxt.xpathEval("/networks/network[name [position()=1]= '"+ name + "']")
+    for i in res:
+        return i.prop(data)
+
 def getListOfVMs(name = None,selector = None):
     """ get getListOfVMs 
     if name is specified search by name
@@ -85,12 +93,11 @@ def getListOfSDs(name = None,selector = None):
         sdlist.append(sdin)
     return sdlist
 
-def getListOfVlans(search=None):
+def getListOfVlans(search=None,selector = None):
     """ get list of dictionaries of networks """
     networksxml = rhevGet("/api/networks")
     doc = libxml2.parseDoc(networksxml)
     ctxt = doc.xpathNewContext()
-    ## res =  ctxt.xpathEval("/networks/network[data_center[@id='%s']/vlan/@id]"%getDcData(rhev_settings.DC ,"id"))
     res = ctxt.xpathEval("/networks/network/data_center[@id='"  + getDcData(rhev_settings.DC ,"id") + "']/../*[self::name or self::vlan/@id]")
     vlans = []
     for i in res:
@@ -101,17 +108,28 @@ def getListOfVlans(search=None):
             vlan["vlanid"] = i.prop("id")
             vlans.append(vlan)
             vlan = None
-    for vlan in vlans: 
-        if not search:
-            print "Name: %s\t\t\t\tVLAN ID: %s" %(vlan["name"],vlan["vlanid"])
-        else:
+    if not selector:
+        for vlan in vlans: 
+            if not search:
+                print "Name: %s\t\t\t\tVLAN ID: %s" %(vlan["name"],vlan["vlanid"])
+            else:
+                try:
+                    if int(vlan["vlanid"]) == int(search):
+                        print "Name: %s\t\t\t\tVLAN ID: %s" %(vlan["name"],vlan["vlanid"])
+                except:
+                    if vlan["name"].find(search) != -1 :
+                        print "Name: %s\t\t\t\tVLAN ID: %s" %(vlan["name"],vlan["vlanid"])
+    result = []
+    if not search:
+        return vlans
+    for vlan in vlans:
             try:
                 if int(vlan["vlanid"]) == int(search):
-                    print "Name: %s\t\t\t\tVLAN ID: %s" %(vlan["name"],vlan["vlanid"])
+                    result.append(vlan)
             except:
                 if vlan["name"].find(search) != -1 :
-                    print "Name: %s\t\t\t\tVLAN ID: %s" %(vlan["name"],vlan["vlanid"])
-    return vlans
+                    result.append(vlan)
+    return result
 
 
 def getDcData(dcName,data):
