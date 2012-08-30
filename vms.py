@@ -20,6 +20,7 @@ class NotImplementedYet(Exception):
         return self.message
 
 def exit(message):
+    """ Exit with exit code 1 """
     print message
     sys.exit(1)
 
@@ -72,7 +73,16 @@ def createMemoryElement(document,memory):
     memoryElement.appendChild(memoryNode)
     return memoryElement
 
-def createOsElement(document,osparam):
+def createCPUElement(document,cores=1,sockets=1):
+    cpuElement = document.createElement("cpu")
+    topologyElement = document.createElement("topology")
+    topologyElement.setAttribute("cores",str(cores))
+    topologyElement.setAttribute("sockets",str(sockets))
+    cpuElement.appendChild(topologyElement)
+    return cpuElement
+
+
+def createOsElement(document,osparam,ostype):
     """
     <os>
        <boot dev="hd"/>
@@ -80,10 +90,12 @@ def createOsElement(document,osparam):
     """
     osElement = None
     osElement = document.createElement("os")
-    if osparam.has_key("bootdev"):
-        osBootElement = document.createElement("boot")
-        osBootElement.setAttribute("dev",osparam["bootdev"])
-        osElement.appendChild(osBootElement)
+    osElement.setAttribute("type",ostype)
+    if osparam:
+        if osparam.has_key("bootdev"):
+            osBootElement = document.createElement("boot")
+            osBootElement.setAttribute("dev",osparam["bootdev"])
+            osElement.appendChild(osBootElement)
         if osparam.has_key("kernel"):
             kernelElement = document.createElement("kernel")
             kernelNode = document.createTextNode(osparam["kernel"])
@@ -111,7 +123,7 @@ def createDescriptionElement(document,description):
     return descriptionElement
 
 
-def createVmXml(vmname,vmdescription,clustername,memory,osparam = None):
+def createVmXml(vmname,vmdescription,clustername,memory,cores,sockets,ostype,osparam = None):
     """ 
     create network XML
     """
@@ -123,11 +135,50 @@ def createVmXml(vmname,vmdescription,clustername,memory,osparam = None):
     """
     topElement.appendChild(createNameElement(document,vmname))
     topElement.appendChild(createClusterElement(document,clustername))
+    topElement.appendChild(createOsElement(document,osparam,ostype))
     topElement.appendChild(createDescriptionElement(document,vmdescription))
     topElement.appendChild(createMemoryElement(document,memory))
+    topElement.appendChild(createCPUElement(document,cores,sockets))
     topElement.appendChild(createTemplateElement(document))
     if osparam: topElement.appendChild(createOsElement(document,osparam))
     return document.toxml()
+def createOverridenVmXml(osparam,ostype,pause="false"):
+    """
+        <action>
+            <pause>true</pause>
+            <vm>
+                <stateless>true</stateless>
+                <display>
+                    <type>spice</type>
+                </display>
+                <os>
+                    <boot dev="cdrom"/>
+                </os>
+                <cdroms>
+                    <cdrom>
+                        <file id="windows-xp.iso"/>
+                    </cdrom>
+                </cdroms>
+                <placement_policy>
+                    <host id="02447ac6-bcba-448d-ba2b-f0f453544ed2"/>       
+                </placement_policy>
+            </vm>
+        </action>
+    """
+    dom = getDOMImplementation()
+    document = dom.createDocument(None, "action", None)
+    topElement = document.documentElement
+
+    pauseElement = document.createElement("pause")
+    pauseNode = document.createTextNode(pause)
+    pauseElement.appendChild(pauseNode)
+    topElement.appendChild(pauseElement)
+    vmElement = document.createElement("vm")
+    vmElement.appendChild(createOsElement(document,osparam,ostype))
+    topElement.appendChild(vmElement)
+    return document.toxml()
+
+
 
 ######################################################
 ################# DISK XML ###########################
@@ -220,14 +271,14 @@ def createNetworkXML(name,id):
     topElement.appendChild(networkElement)
     return document.toxml()
 
-
-
-
-def createVm(vmname,clustername,memory,vmdescription,osparam):
+def createVm(vmname,clustername,memory,vmdescription,osparam,cores,sockets,ostype):
     vmXML = createVmXml(vmname = vmname,
             clustername = clustername,
             memory = memory,
+            cores= cores,
+            sockets = sockets,
             vmdescription = vmdescription,
+            ostype = ostype,
             osparam = osparam)
     print rhevPost("/api/vms",vmXML)
 
@@ -262,8 +313,11 @@ def vmSelect(name):
 def sdSelect(name):
     selector = getListOfSDs(name,True)
     number = len(selector)
-    if number == 0 : 
+    if number == 0 :
         exit("SD not found exiting")
+    if number == 1:
+        print "Founded 1 SD %s, using it"%selector[0]["name"]
+        return selector[0]["id"]
     print "%d SD is (are) founded please select"%int(number)
     for i in selector:
         print "%d) %s "%(selector.index(i),i["name"])
@@ -276,6 +330,9 @@ def networkSelect(name):
     number = len(selector)
     if number == 0:
         exit("Network not found, exiting")
+    if number == 1:
+        print "Founded 1 network %s, using it"%selector[0]["name"]
+        return getNetworkData(selector[0]["name"],"id")
     print "%d network(s) is (are) founded please select"%int(number)
     for i in selector:
         print "%d) %s "%(selector.index(i),i["name"])
@@ -292,20 +349,29 @@ def set_parser():
     parser = OptionParser()
     parser.add_option("--action","-a",dest="action",help="Action to do: create, test, console,delete,list,adddisk,addnic",)
     parser.add_option("--name","-n",dest="vmname",help="Name of VM")
+    parser.add_option("--os","--ostype",dest="os",help="Type of guest OS")
     parser.add_option("--memory","-m",dest="memory",help="Memory in MB")
+    parser.add_option("--cores",dest="cores",help="Number of cores")
     parser.add_option("--description","-d",dest="description",help = "Description of VM")
     parser.add_option("--template","-t",dest="template",help="Template for VM")
     parser.add_option("--disk","-c",dest="hd",help="Ammount of attached disk")
     parser.add_option("--disktype",dest="disktype",help="Type of attached disk (system,data)")
-    parser.add_option("--network",dest="network",help="Name of exiting (new) network")
-    parser.add_option("--vlan","-v",dest="vlan",help="VLAN ID of attaching network")
+    parser.add_option("--network","-w",dest="network",help="Name of exiting (new) network")
+    parser.add_option("--vlan","--vlanid","-v",dest="vlan",help="VLAN ID of attaching network")
+    parser.add_option("--ip",dest="ip",help="IP address of machine")
+    parser.add_option("--netmask",dest="netmask",help="Netmask of machine")
+    parser.add_option("--gw",dest="gw",help="Gateway of network")
+    parser.add_option("--ks",dest="ks",help="Kickstart URL")
+    parser.add_option("--sd",dest="sd",help="Storage domain name")
     (options, args) = parser.parse_args()
     return options
 
-def process_create(options):
+def processCreate(options):
     print "Creating Virutal Machine"
-    if not options.vmname:
-        exit("Name of virtual machine is mandatory")
+    if not options.vmname or not options.os:
+        exit("Name of virtual machine and ostype is mandatory")
+    if not options.os in rhev_settings.OSTYPES: 
+        exit("Supported ostypes are:" + str(rhev_settings.OSTYPES) )
     vmname = options.vmname
     if options.memory:
         memory = options.memory
@@ -320,7 +386,10 @@ def process_create(options):
             vmname = vmname,
             clustername = rhev_settings.CLUSTER,
             memory = memory,
+            cores = options.cores,
+            sockets = 1,
             vmdescription = description,
+            ostype = "other_linux",
             osparam = None
             )
 
@@ -331,34 +400,50 @@ def processAddDisk(options):
     if options.disktype == "system":
         disktype = "system"
     vmid = vmSelect(options.vmname or "")
-    sd = sdSelect(None)
+    sd = sdSelect(options.sd)
     attachDisk(vmid,createDiskXML(vmid,sd,options.hd,disktype))
 
 def processAddNIC(options):
     if not options.network and not options.vlan:
         exit("Please specify network name or part of network name")
     if options.network and options.vlan:
-        a = raw_input("Ypu've specified both network and VLANID. Would you like to create new network? (y/n): " )
-        if a == 'n' or "N":
-            exit("Exiting")
         raise NotImplementedYet("Please create network before")
     else:
         netid = networkSelect(options.network or options.vlan)
         vmid = vmSelect(options.vmname or "")
         rhevPost("/api/vms/" + vmid + "/nics",createNetworkXML("nic1",netid))
 
+def processKsInstall(options):
+    """ Process automatic installation of VM
+    """
+    if not options.ip or not options.netmask or not options.gw or not options.ks:
+        exit("All network parameters MUST be specified (--ip,--netwmask,--gw,--ks)")
+    print "Installation..."
+    osparam = {}
+    osparam["kernel"] = rhev_settings.OSTYPES[options.os] + "vmlinuz"
+    osparam["initrd"] = rhev_settings.OSTYPES[options.os] + "initrd.img"
+    osparam["cmdline"] = "linux ip=%s netmask=%s gw=%s ks=%s" %(options.ip,options.netmask,options.gw,options.ks)
+    vmid = vmSelect(options.vmname or "")
+    data = createOverridenVmXml(osparam,options.os,"true")
+    rhevPost(("/api/vms/"+ vmid + "/start"),data)
+    sys.exit(0)
+
 if __name__=="__main__":
     options = set_parser()
+    ## TODO
+    ## Class-wide methods?
     if not options.action:
         exit("You MUST specify action")
     if options.action == "create":
-        process_create(options)
+        processCreate(options)
     if options.action == "addnetwork":
         processAddNIC(options)
     if options.action == "adddisk":
         processAddDisk(options)
     if options.action == "ticket":
-         raise NotImplementedYet("Not implemented yet")
+        raise NotImplementedYet("Not implemented yet")
+    if options.action == "ksinstall":
+        processKsInstall(options)
     if options.action == "list":
         if options.vmname:
             getListOfVMs(options.vmname)

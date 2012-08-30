@@ -89,9 +89,13 @@ def getListOfSDs(name = None,selector = None):
     for sd in res:
         sdin = {}
         sdin["name"] = sd.firstElementChild().get_content()
+        print sdin["name"]
         sdin["id"] = sd.prop("id")
         sdlist.append(sdin)
-    return sdlist
+    result = []
+    if name:
+        result = [sdin for sdin in sdlist if sdin["name"].find(name) != -1]
+    return result or sdlist
 
 def getListOfVlans(search=None,selector = None):
     """ get list of dictionaries of networks """
@@ -180,9 +184,10 @@ def rhevPost(url,data):
     """ Make POST request, send data
     """
     conn = rhevConnect()
+    print url
+    print data
     conn.request("POST", url, body = data.encode('utf-8'), headers = getHeaders())
     r = conn.getresponse()
-    print url
     ## DEBUG 
     ## TODO: check status 
     print r.status, r.reason
