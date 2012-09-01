@@ -169,10 +169,11 @@ def createOverridenVmXml(osparam,ostype,pause="false"):
     document = dom.createDocument(None, "action", None)
     topElement = document.documentElement
 
-    pauseElement = document.createElement("pause")
-    pauseNode = document.createTextNode(pause)
-    pauseElement.appendChild(pauseNode)
-    topElement.appendChild(pauseElement)
+    if pause == "true":
+        pauseElement = document.createElement("pause")
+        pauseNode = document.createTextNode(pause)
+        pauseElement.appendChild(pauseNode)
+        topElement.appendChild(pauseElement)
     vmElement = document.createElement("vm")
     vmElement.appendChild(createOsElement(document,osparam,ostype))
     topElement.appendChild(vmElement)
@@ -422,9 +423,9 @@ def processKsInstall(options):
     osparam = {}
     osparam["kernel"] = rhev_settings.OSTYPES[options.os] + "vmlinuz"
     osparam["initrd"] = rhev_settings.OSTYPES[options.os] + "initrd.img"
-    osparam["cmdline"] = "linux ip=%s netmask=%s gw=%s ks=%s" %(options.ip,options.netmask,options.gw,options.ks)
+    osparam["cmdline"] = "linux ip=%s netmask=%s gateway=%s ks=%s" %(options.ip,options.netmask,options.gw,options.ks)
     vmid = vmSelect(options.vmname or "")
-    data = createOverridenVmXml(osparam,options.os,"true")
+    data = createOverridenVmXml(osparam,options.os,"false")
     rhevPost(("/api/vms/"+ vmid + "/start"),data)
     sys.exit(0)
 
