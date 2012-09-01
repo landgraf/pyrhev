@@ -89,7 +89,6 @@ def getListOfSDs(name = None,selector = None):
     for sd in res:
         sdin = {}
         sdin["name"] = sd.firstElementChild().get_content()
-        print sdin["name"]
         sdin["id"] = sd.prop("id")
         sdlist.append(sdin)
     result = []
@@ -184,11 +183,11 @@ def rhevPost(url,data):
     """ Make POST request, send data
     """
     conn = rhevConnect()
-    print url
-    print data
     conn.request("POST", url, body = data.encode('utf-8'), headers = getHeaders())
     r = conn.getresponse()
     ## DEBUG 
     ## TODO: check status 
     print r.status, r.reason
-    return r.read()
+    status = r.read()
+    return status
+    ## return r.read()
