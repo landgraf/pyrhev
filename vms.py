@@ -6,6 +6,7 @@ from optparse import OptionParser
 #os.path.append("../pyrheviic/")
 from rhev_connection import *
 import rhev_settings
+from selectors import *
 
 class NoSuchAttr(Exception):
     def __init__(self, m):
@@ -23,7 +24,6 @@ def exit(message):
     """ Exit with exit code 1 """
     print message
     sys.exit(1)
-
 
 #################################################
 ##############  VM XML ##########################
@@ -283,64 +283,6 @@ def createVm(vmname,clustername,memory,vmdescription,osparam,cores,sockets,ostyp
             osparam = osparam)
     print rhevPost("/api/vms",vmXML)
 
-def testAction():
-    osparam = {}
-    osparam["bootdev"] = "hd"
-    osparam["kernel"] = "/mnt/share/rhel56/x68_64/vmlinuz"
-    osparam["initrd"] = "/mnt/share/rhel56/x68_64/initrd.img"
-    osparam["cmdline"] = "ip=192.168.0.1 netmask=255.255.255.0 gateway=192.168.0.1 ks=ftp://172.17.211.94/rhelks/some.ks "
-    createVm(vmname = "vmname" ,
-            clustername = rhev_settings.CLUSTER,
-            #memory = str(536870912),
-            memory = 1024,
-            vmdescription = "vmDescription",
-            osparam = osparam)
-
-def vmSelect(name):
-    selector = getListOfVMs(name,True)
-    number = len(selector)
-    if number == 0 :
-        exit("VM not found exiting")
-    if number == 1:
-        print "Founded 1 VM %s, using it"%selector[0]["name"]
-        return selector[0]["id"]
-    print "%d VM is (are) founded please select"%int(number)
-    for i in selector:
-        print "%d) %s "%(selector.index(i),i["name"])
-    a = input("Please specify:")
-    print "VM %s selected"%selector[a]["name"]
-    return selector[a]["id"]
-
-def sdSelect(name):
-    selector = getListOfSDs(name,True)
-    number = len(selector)
-    if number == 0 :
-        exit("SD not found exiting")
-    if number == 1:
-        print "Founded 1 SD %s, using it"%selector[0]["name"]
-        return selector[0]["id"]
-    print "%d SD is (are) founded please select"%int(number)
-    for i in selector:
-        print "%d) %s "%(selector.index(i),i["name"])
-    a = input("Please specify:")
-    print "SD %s selected"%selector[a]["name"]
-    return selector[a]["id"]
-
-def networkSelect(name):
-    selector = getListOfVlans(name,True)
-    number = len(selector)
-    if number == 0:
-        exit("Network not found, exiting")
-    if number == 1:
-        print "Founded 1 network %s, using it"%selector[0]["name"]
-        return getNetworkData(selector[0]["name"],"id")
-    print "%d network(s) is (are) founded please select"%int(number)
-    for i in selector:
-        print "%d) %s "%(selector.index(i),i["name"])
-    a = input("Please specify:")
-    print "Network %s selected"%selector[a]["name"]
-    return getNetworkData(selector[a]["name"],"id")
-
 def attachDisk(vmid,diskXML):
     if not vmid:
         exit("VM not specified exiting...")
@@ -400,8 +342,8 @@ def processAddDisk(options):
     disktype = "data"
     if options.disktype == "system":
         disktype = "system"
-    vmid = vmSelect(options.vmname or "")
-    sd = sdSelect(options.sd)
+    vmid = VMSelector().select(options.vmname or "")
+    sd = SDSelector().select(options.sd)
     attachDisk(vmid,createDiskXML(vmid,sd,options.hd,disktype))
 
 def processAddNIC(options):
@@ -410,8 +352,8 @@ def processAddNIC(options):
     if options.network and options.vlan:
         raise NotImplementedYet("Please create network before")
     else:
-        netid = networkSelect(options.network or options.vlan)
-        vmid = vmSelect(options.vmname or "")
+        netid = NetworkSelector().select(options.network or options.vlan)
+        vmid = VMSelector().select(options.vmname or "")
         rhevPost("/api/vms/" + vmid + "/nics",createNetworkXML("nic1",netid))
 
 def processKsInstall(options):
@@ -450,6 +392,4 @@ if __name__=="__main__":
             getListOfVMs(options.vmname)
         else:
             getListOfVMs()
-    if options.action == "test":
-        testAction()
 
