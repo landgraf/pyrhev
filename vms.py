@@ -366,7 +366,7 @@ def processKsInstall(options):
     osparam["kernel"] = rhev_settings.OSTYPES[options.os] + "vmlinuz"
     osparam["initrd"] = rhev_settings.OSTYPES[options.os] + "initrd.img"
     osparam["cmdline"] = "linux ip=%s netmask=%s gateway=%s ks=%s" %(options.ip,options.netmask,options.gw,options.ks)
-    vmid = vmSelect(options.vmname or "")
+    vmid = VMSelector().select(options.vmname or "")
     data = createOverridenVmXml(osparam,options.os,"false")
     rhevPost(("/api/vms/"+ vmid + "/start"),data)
     sys.exit(0)

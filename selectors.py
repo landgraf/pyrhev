@@ -10,7 +10,7 @@ class Selector(object):
             exit("Instanse not found, exiting")
         if number == 1:
             print "Founded 1 instance %s, using it"%selector[0]["name"]
-            return getInstanceData(selector[0]["name"],"id")
+            return selector[0]
         print "%d instance(s) is (are) founded please select"%int(number)
         for i in selector:
             print "%d) %s "%(selector.index(i),i["name"])
