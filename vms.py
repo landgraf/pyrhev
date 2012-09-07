@@ -406,7 +406,10 @@ def processConsole(options):
         urllib.urlretrieve("http://%s:8080/ca.crt"%rhev_settings.HOST_PORT.split(":")[0], rhev_settings.CERT_FILENAME)
     orgname = rhev_settings.ORGNAME
     spiceconnector = 'spicec -s %d -p %d -h %s -w %s --ca-file %s  --host-subject "O=%s,CN=%s"' %(int(secureport),int(unsecureport),host,tvalue,certfile,orgname,host)
-    print spiceconnector
+    if not os.environ["DISPLAY"]:
+        print spiceconnector
+    else:
+        os.system(spiceconnector)
 
 if __name__=="__main__":
     options = set_parser()
