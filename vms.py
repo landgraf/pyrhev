@@ -272,6 +272,21 @@ def createNetworkXML(name,id):
     topElement.appendChild(networkElement)
     return document.toxml()
 
+def getTicketXML():
+    dom = getDOMImplementation()
+    document = dom.createDocument(None, "action", None)
+    topElement = document.documentElement
+    """
+        <name>nic2</name>
+    """
+    TktElement = document.createElement("ticket")
+    ExpElement = document.createElement("expire")
+    ExpNode = document.createTextNode("120")
+    ExpElement.appendChild(ExpNode)
+    TktElement.appendChild(ExpElement)
+    topElement.appendChild(TktElement)
+    return document.toxml()
+
 def createVm(vmname,clustername,memory,vmdescription,osparam,cores,sockets,ostype):
     vmXML = createVmXml(vmname = vmname,
             clustername = clustername,
@@ -281,16 +296,16 @@ def createVm(vmname,clustername,memory,vmdescription,osparam,cores,sockets,ostyp
             vmdescription = vmdescription,
             ostype = ostype,
             osparam = osparam)
-    print rhevPost("/api/vms",vmXML)
+    rhevPost("/api/vms",vmXML)
 
 def attachDisk(vmid,diskXML):
     if not vmid:
         exit("VM not specified exiting...")
-    print rhevPost("/api/vms/"+ vmid + "/disks" ,diskXML)
+    rhevPost("/api/vms/"+ vmid + "/disks" ,diskXML)
 
 def set_parser():
     parser = OptionParser()
-    parser.add_option("--action","-a",dest="action",help="Action to do: create, test, console,delete,list,adddisk,addnic",)
+    parser.add_option("--action","-a",dest="action",help="Action to do: create, test, console,delete,list,adddisk,addnic,ticket,console",)
     parser.add_option("--name","-n",dest="vmname",help="Name of VM")
     parser.add_option("--os","--ostype",dest="os",help="Type of guest OS")
     parser.add_option("--memory","-m",dest="memory",help="Memory in MB")
@@ -371,6 +386,28 @@ def processKsInstall(options):
     rhevPost(("/api/vms/"+ vmid + "/start"),data)
     sys.exit(0)
 
+def processTicket(options):
+    vmid = VMSelector().select(options.vmname or "")
+    ticket = rhevPost("/api/vms/" + vmid + "/ticket",getTicketXML() )
+    getTicketValue(ticket)
+
+def processConsole(options):
+    vmid = VMSelector().select(options.vmname or "")
+    ticket = rhevPost("/api/vms/" + vmid + "/ticket",getTicketXML() )
+    vmxml = rhevGet("/api/vms/" + vmid )
+    tvalue = getTicketValue(ticket)
+    secureport = getPort(vmxml,secure = True)
+    unsecureport = getPort(vmxml)
+    host = getVmHost(vmxml)
+    certfile = rhev_settings.CERT_FILENAME
+    if not os.path.exists(certfile):
+        print "Downloading RHEVM cert"
+        print "http://%s:8080/ca.crt"%rhev_settings.HOST_PORT.split(":")[0]
+        urllib.urlretrieve("http://%s:8080/ca.crt"%rhev_settings.HOST_PORT.split(":")[0], rhev_settings.CERT_FILENAME)
+    orgname = rhev_settings.ORGNAME
+    spiceconnector = 'spicec -s %d -p %d -h %s -w %s --ca-file %s  --host-subject "O=%s,CN=%s"' %(int(secureport),int(unsecureport),host,tvalue,certfile,orgname,host)
+    print spiceconnector
+
 if __name__=="__main__":
     options = set_parser()
     ## TODO
@@ -383,8 +420,6 @@ if __name__=="__main__":
         processAddNIC(options)
     if options.action == "adddisk":
         processAddDisk(options)
-    if options.action == "ticket":
-        raise NotImplementedYet("Not implemented yet")
     if options.action == "ksinstall":
         processKsInstall(options)
     if options.action == "list":
@@ -392,4 +427,8 @@ if __name__=="__main__":
             getListOfVMs(options.vmname)
         else:
             getListOfVMs()
+    if options.action == "ticket":
+        processTicket(options)
+    if options.action == "console":
+        processConsole(options)
 

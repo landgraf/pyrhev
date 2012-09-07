@@ -35,8 +35,7 @@ def getTagData(tagname,data):
     doc = libxml2.parseDoc(tags)
     ctxt = doc.xpathNewContext()
     res = ctxt.xpathEval("/tags/tag[name[position()=1]= '" + tagname + "']")
-    for i in res:
-        return i.prop(data)
+    return res[0].prop(data)
 
 def getClusterData(clusterName,data):
     """ Get properties of cluster
@@ -45,16 +44,14 @@ def getClusterData(clusterName,data):
     doc = libxml2.parseDoc(clusters)
     ctxt = doc.xpathNewContext()
     res = ctxt.xpathEval("/clusters/cluster[name [position()=1]= '"+ clusterName + "']")
-    for i in res:
-        return i.prop(data)
+    return res[0].prop(data)
 
 def getNetworkData(name,data):
     networks = rhevGet("/api/networks")
     doc = libxml2.parseDoc(networks)
     ctxt = doc.xpathNewContext()
     res = ctxt.xpathEval("/networks/network[name [position()=1]= '"+ name + "']")
-    for i in res:
-        return i.prop(data)
+    return res[0].prop(data)
 
 def getListOfVMs(name = None,selector = None):
     """ get getListOfVMs 
@@ -142,8 +139,46 @@ def getDcData(dcName,data):
     doc = libxml2.parseDoc(clusters)
     ctxt = doc.xpathNewContext()
     res = ctxt.xpathEval("/data_centers/data_center[name [position()=1]= '"+ dcName + "']")
-    for i in res:
-        return i.prop(data)
+    return res[0].prop(data)
+
+def getTicketValue(xml):
+    """ Get value of ticket """
+    doc = libxml2.parseDoc(xml)
+    ctxt = doc.xpathNewContext()
+    res = ctxt.xpathEval("//ticket/value")
+    if len(res) == 1:
+        for i in res:
+            return i.getContent()
+    else:
+        return None
+
+def getPort(xml,secure = None):
+    doc = libxml2.parseDoc(xml)
+    ctxt = doc.xpathNewContext()
+    if not secure :
+        res = ctxt.xpathEval("//display/port")
+    else :
+        res = ctxt.xpathEval("//display/secure_port")
+    if len(res) == 1:
+        for i in res:
+            return i.getContent()
+    else:
+        return None
+
+def getVmHost(xml):
+    doc = libxml2.parseDoc(xml)
+    ctxt = doc.xpathNewContext()
+    res = ctxt.xpathEval("//host")
+    if len(res) == 1:
+        for i in res:
+            hosthref = i.prop("href")
+    hostxml = rhevGet(hosthref)
+    doc = libxml2.parseDoc(hostxml)
+    ctx = doc.xpathNewContext()
+    res = ctx.xpathEval("/host/address")
+    return res[0].getContent()
+
+
 
 def getAllHosts(cluster):
     """ get "rhev_settings.NIC"  hrefs for attaching project networks
@@ -184,10 +219,14 @@ def rhevPost(url,data):
     """
     conn = rhevConnect()
     conn.request("POST", url, body = data.encode('utf-8'), headers = getHeaders())
+    print url
     r = conn.getresponse()
     ## DEBUG 
     ## TODO: check status 
-    print r.status, r.reason
     status = r.read()
+    print r.status,r.reason
+    if int(r.status)>=400:
+        print r.reason
+        print status
     return status
     ## return r.read()
