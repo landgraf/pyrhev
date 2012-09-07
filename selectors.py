@@ -9,7 +9,7 @@ class Selector(object):
         if number == 0:
             exit("Instanse not found, exiting")
         if number == 1:
-            print "Founded 1 instance %s, using it"%selector[0]["name"]
+            print "Found 1 instance %s, using it"%selector[0]["name"]
             return selector[0]
         print "%d instance(s) is (are) founded please select"%int(number)
         for i in selector:
