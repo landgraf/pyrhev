@@ -193,7 +193,7 @@ def getAllHosts(cluster):
         nic = rhevGet(i.prop("href")+"/nics")
         nicdoc = libxml2.parseDoc(nic)
         ctxt = nicdoc.xpathNewContext()
-        res = ctxt.xpathEval("/host_nics/host_nic[name='eth1']")
+        res = ctxt.xpathEval("/host_nics/host_nic/name[text() = '%s']/parent::*" %rhev_settings.NIC)
         for i in res:
             nics.append(i.prop("href"))
     return nics
